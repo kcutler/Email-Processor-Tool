@@ -1,0 +1,130 @@
+﻿using System;
+using System.IO;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Diagnostics;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using Outlook = Microsoft.Office.Interop.Outlook;
+using System.Collections;
+
+
+namespace CheckEmail
+{
+    public partial class CNS_Proccessor : Form
+    {
+        public CNS_Proccessor(Outlook.MailItem email, string acct)
+        {
+            Console.WriteLine("IN CONSTRUCTOR");
+            InitializeComponent();
+            FillForm(email, acct);
+        }
+
+        private void FillForm(Outlook.MailItem emailObject, string acct)
+        {
+            string bodyString = emailObject.Body.Remove((emailObject.Body.IndexOf(")") + 1), (emailObject.Body.IndexOf("@") - emailObject.Body.IndexOf(")")));
+            string bodyIntro = bodyString.Substring(bodyString.IndexOf("PLEASE"), bodyString.IndexOf("ACCOUNT") + 3); //+ Environment.NewLine;
+            string bodySignature = Environment.NewLine + bodyString.Substring(bodyString.IndexOf("Regards,")); //grabs signature
+            string acctNumLine = Environment.NewLine + bodyString.Substring(bodyString.IndexOf(acct), 28).Replace("\n\r", " ").TrimStart() + Environment.NewLine;
+
+            ToBox.Text = FindAcctEmail(acct);
+            FromBox.Text = emailObject.ReceivedByName.ToString();
+            //CCBox.Text = "Kristen.Cutler@cutlergrouplp.com, Kristen.Cutler@cutlergrouplp.com, Kristen.Cutler@cutlergrouplp.com";
+            CCBox.Text = "Katrina.Stephenson@cutlergrouplp.com, Doug.Patterson@cutlergrouplp.com, Johannav@cutlergrouplp.com, chicagoclerks@cutlergouplp.com";
+            SubjectBox.Text = "CUTLER DEFICIT EXECUTIONS";
+            Console.WriteLine(bodyIntro);
+            //BodyBox.Text = bodyIntro + acctNumLine + Environment.NewLine + Environment.NewLine + bodySignature;
+            BodyBox.Text = bodyIntro + acctNumLine +Environment.NewLine + bodySignature;
+        }
+
+        private string FindAcctEmail(string acct)
+        {
+            //Finds EMail.txt file in Current Directory.
+            string path = Path.Combine(Environment.CurrentDirectory, "EMail.txt"); 
+            string email = string.Empty;
+            string data = string.Empty;
+            StreamReader sr = File.OpenText(path);
+
+            while ((data = sr.ReadLine()) != null)
+            {
+                if (data.Trim().StartsWith(acct.Trim()))
+                {
+                    email = data.Substring(8);
+                }
+            }
+            return email;
+        }
+
+        private void SendButton_Click(object sender, EventArgs e)
+        {
+            SendEmail();
+        }
+
+        public void SendEmail()
+        {
+            Console.WriteLine("IN SEND EMAIL FN");
+            Microsoft.Office.Interop.Outlook.Application app = null;
+            Microsoft.Office.Interop.Outlook.MailItem mailItem = null;
+
+            try
+            {
+                //var emailTo = "Kristen.Cutler@cutlergrouplp.com";
+                //mailItem.To = emailTo;
+                app = new Outlook.Application();
+                mailItem = app.CreateItem(Microsoft.Office.Interop.Outlook.OlItemType.olMailItem);
+                List<string> CC = CCBox.Text.Split(',').ToList();
+                Outlook.Recipients recips = (Outlook.Recipients)mailItem.Recipients;
+                foreach (string email in CC)
+                {
+                    Outlook.Recipient recip = (Outlook.Recipient)recips.Add(email);
+                    recip.Type = (int)Outlook.OlMailRecipientType.olCC;
+                }
+                mailItem.To = ToBox.Text.ToString();
+                mailItem.Subject = SubjectBox.Text.ToString();
+                mailItem.Body = BodyBox.Text.ToString();
+                string log = "Email sent to " + mailItem.To.ToString();
+                ((Outlook._MailItem)mailItem).Send();
+                MessageBox.Show(log);
+            }
+            finally
+            {
+                if (app != null)
+                {
+                    System.Runtime.InteropServices.Marshal.FinalReleaseComObject(app);
+                }
+                if (mailItem != null)
+                {
+                    System.Runtime.InteropServices.Marshal.FinalReleaseComObject(mailItem);
+                }
+                this.Close();
+            }
+        }
+
+        private void textBox1_TextChanged(object sender, EventArgs e)
+        {
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void CCBox_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+    }
+}
+
